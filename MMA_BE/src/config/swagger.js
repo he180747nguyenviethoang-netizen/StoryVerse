@@ -23,13 +23,15 @@ const options = {
                 },
             },
         },
-        security: [
-            {
-                bearerAuth: [],
-            },
-        ],
     },
-    apis: ['./src/routes/*.js'],
+    apis: [
+        './src/routes/authRoutes.js',
+        './src/routes/readingHistoryRoutes.js',
+        './src/routes/genreRoutes.js',
+        './src/routes/comicRoutes.js',
+        './src/routes/chapterRoutes.js',
+        './src/routes/commentRoutes.js',
+    ],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

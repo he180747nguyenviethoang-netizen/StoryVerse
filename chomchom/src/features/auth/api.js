@@ -40,7 +40,15 @@ export const authApi = {
       email: payload.email,
       password: payload.password,
     });
-    return data;
+
+    const user = {
+      _id: data._id,
+      username: data.username,
+      email: data.email,
+      role: data.role,
+    };
+
+    return { user, token: extractToken(data) };
   },
 
   verifyOtp: async (payload) => {

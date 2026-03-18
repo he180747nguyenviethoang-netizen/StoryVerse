@@ -189,7 +189,6 @@ export default function RegisterScreen({ onSwitchMode }) {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Schema inside component so validation messages update with language changes
   const schema = useMemo(
@@ -226,38 +225,30 @@ export default function RegisterScreen({ onSwitchMode }) {
     defaultValues: { username: '', email: '', password: '', confirmPassword: '' },
   });
 
-  const busy = isSubmitting || isGoogleLoading;
+  const busy = isSubmitting;
+
+  const goHome = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs', params: { screen: 'Home' } }],
+    });
+  };
 
   async function onSubmit(values) {
     try {
-      await authApi.register({
+      const res = await authApi.register({
         username: values.username.trim(),
         email: values.email.trim(),
         password: values.password,
       });
-      Alert.alert(t('auth.register.verifyTitle'), t('auth.register.verifyMessage'));
-      navigation.navigate('VerifyOtp', {
-        email: values.email.trim(),
-        purpose: 'register',
-      });
+      await login(res.user, res.token);
+      goHome();
     } catch (err) {
       const status = err?.response?.status;
       const message =
         err?.response?.data?.message ??
         (status === 400 ? t('auth.errors.registerInvalid') : t('auth.errors.default'));
       Alert.alert(t('common.error'), message);
-    }
-  }
-
-  async function handleGoogleLogin() {
-    try {
-      setIsGoogleLoading(true);
-      const res = await authApi.loginWithGoogle();
-      login(res.user, res.token);
-    } catch {
-      Alert.alert(t('common.error'), t('auth.errors.googleFailed'));
-    } finally {
-      setIsGoogleLoading(false);
     }
   }
 
@@ -273,6 +264,15 @@ export default function RegisterScreen({ onSwitchMode }) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.card}>
+            <TouchableOpacity
+              onPress={goHome}
+              activeOpacity={0.7}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}
+            >
+              <Ionicons name="chevron-back" size={20} color={colors.text} />
+              <Text style={{ color: colors.text, fontWeight: '600' }}>Về trang chủ</Text>
+            </TouchableOpacity>
+
             <Text style={styles.title}>{t('auth.register.title')}</Text>
             <Text style={styles.subtitle}>{t('auth.register.subtitle')}</Text>
 
@@ -443,32 +443,6 @@ export default function RegisterScreen({ onSwitchMode }) {
                 <ActivityIndicator color={colors.white} />
               ) : (
                 <Text style={styles.primaryButtonText}>{t('auth.register.createButton')}</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>{t('common.or')}</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Google button */}
-            <TouchableOpacity
-              style={[styles.googleButton, busy && styles.buttonDisabled]}
-              onPress={handleGoogleLogin}
-              disabled={busy}
-              activeOpacity={0.85}
-            >
-              {isGoogleLoading ? (
-                <ActivityIndicator color={colors.google} />
-              ) : (
-                <>
-                  <View style={styles.googleBadge}>
-                    <Text style={styles.googleLetter}>G</Text>
-                  </View>
-                  <Text style={styles.googleButtonText}>{t('auth.login.googleButton')}</Text>
-                </>
               )}
             </TouchableOpacity>
 

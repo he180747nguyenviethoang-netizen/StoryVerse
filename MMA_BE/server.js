@@ -2,7 +2,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import authRoutes from './src/routes/authRoutes.js';
-import userRoutes from './src/routes/userRoutes.js';
 import genreRoutes from './src/routes/genreRoutes.js';
 import comicRoutes from './src/routes/comicRoutes.js';
 import chapterRoutes from './src/routes/chapterRoutes.js';
@@ -32,7 +31,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/genres', genreRoutes);
 app.use('/api/comics', comicRoutes);
 app.use('/api/chapters', chapterRoutes);
