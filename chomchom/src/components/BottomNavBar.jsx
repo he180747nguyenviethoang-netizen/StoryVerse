@@ -23,7 +23,7 @@ const BottomNavBar = ({ navigation, active }) => {
               onPress={() => navigation.navigate(screen)}
               activeOpacity={0.8}
             >
-              <Feather name={icon} size={24} color={isActive ? colors.primary : '#999'} />
+              <Feather name={icon} size={20} color={isActive ? colors.primary : '#999'} />
             </TouchableOpacity>
           );
         })}
@@ -35,7 +35,7 @@ const BottomNavBar = ({ navigation, active }) => {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    bottom: 10,
+    bottom: 14,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -43,10 +43,10 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: colors.background,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 40,
-    gap: 40,
+    paddingVertical: 9,
+    paddingHorizontal: 24,
+    borderRadius: 32,
+    gap: 30,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   item: {
-    padding: 10,
+    padding: 8,
     borderRadius: 30,
   },
   activeItem: {

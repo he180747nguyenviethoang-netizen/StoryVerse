@@ -3,6 +3,7 @@ import {
   getAllUsers,
   getUserById,
   updateUser,
+  updateUserPassword,
   deleteUser,
   addFavorite,
   removeFavorite,
@@ -81,6 +82,46 @@ router.get('/:id', getUserById);
  *         description: Not authenticated
  */
 router.put('/:id', protect, updateUser);
+
+/**
+ * @swagger
+ * /api/users/{id}/password:
+ *   put:
+ *     summary: Change user password
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *       400:
+ *         description: Invalid password data
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized
+ *       404:
+ *         description: User not found
+ */
+router.put('/:id/password', protect, updateUserPassword);
 
 /**
  * @swagger

@@ -12,11 +12,10 @@ function makeStyles(colors) {
       fontWeight: '700',
       color: colors.primary,
       marginBottom: 12,
-      marginTop: 20,
+      marginTop: 12,
       paddingHorizontal: 16,
     },
     horizontalScroll: {
-      marginBottom: 20,
       paddingHorizontal: 16,
     },
     emptyMessage: {

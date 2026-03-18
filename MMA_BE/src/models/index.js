@@ -6,10 +6,18 @@ const userSchema = new mongoose.Schema(
     {
         username: { type: String, required: true, unique: true, trim: true },
         email: { type: String, required: true, unique: true },
-        password: { type: String, required: true },
+        password: { type: String }, // Optional for Google Auth users
 
+        googleId: { type: String, unique: true, sparse: true },
         avatar: String,
         role: { type: String, enum: ["user", "admin"], default: "user" },
+        isVerified: { type: Boolean, default: true },
+
+        verificationCode: { type: String },
+        verificationCodeExpires: { type: Date },
+        resetPasswordCode: { type: String },
+        resetPasswordCodeExpires: { type: Date },
+        resetPasswordVerifiedUntil: { type: Date },
 
         favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comic" }],
         isActive: { type: Boolean, default: true },
@@ -54,6 +62,8 @@ const comicSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+comicSchema.index({ title: 1 });
 
 /* ===================== PAGE (Embedded) ===================== */
 const pageSchema = new mongoose.Schema(

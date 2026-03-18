@@ -16,8 +16,10 @@ function makeStyles(colors) {
     },
     filteredHeader: {
       paddingHorizontal: 16,
-      paddingTop: 20,
+      paddingTop: 8,
       paddingBottom: 10,
+      backgroundColor: colors.background,
+      zIndex: 1,
     },
     filteredTitle: {
       fontSize: 16,
@@ -32,7 +34,7 @@ function makeStyles(colors) {
       gap: 4,
     },
     clearFilterText: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.primary,
     },
@@ -103,6 +105,7 @@ const MainComicList = ({
       }
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
+      stickyHeaderIndices={isFiltered ? [0] : undefined}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
       nestedScrollEnabled={true}

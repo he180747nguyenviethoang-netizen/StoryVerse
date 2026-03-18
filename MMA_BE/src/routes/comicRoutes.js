@@ -10,6 +10,7 @@ import {
   likeComic,
   getLikedComics,
   askReaderChatbot,
+  getRecommendedComics,
 } from "../controllers/comicController.js";
 import { protect, admin } from "../middlewares/auth.js";
 
@@ -82,6 +83,37 @@ router.post("/", protect, admin, createComic);
 router.get("/", getAllComics);
 
 router.get("/like", protect, getLikedComics);
+
+/**
+ * @swagger
+ * /api/comics/recommend:
+ *   post:
+ *     summary: Get AI-recommended comics based on reading history
+ *     tags: [Comics]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [comicIds]
+ *             properties:
+ *               comicIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["60d5f9b4b5e4a23d4c8e4b1a", "60d5f9b4b5e4a23d4c8e4b1b"]
+ *     responses:
+ *       200:
+ *         description: List of recommended comics
+ *       400:
+ *         description: Invalid comicIds
+ *       401:
+ *         description: Not authenticated
+ */
+router.post("/recommend", protect, getRecommendedComics);
 
 /**
  * @swagger

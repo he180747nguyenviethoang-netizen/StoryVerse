@@ -17,41 +17,128 @@ const getChapterContextText = (chapters, currentChapterNumber) => {
     .join("\n");
 };
 
-const generateGeminiText = async (apiKey, prompt) => {
+class GeminiApiError extends Error {
+  constructor(message, { status, body, retryable = false } = {}) {
+    super(message);
+    this.name = "GeminiApiError";
+    this.status = status;
+    this.body = body;
+    this.retryable = retryable;
+  }
+}
+
+const parseGeminiText = (data, fallbackText) => {
+  const parts = data?.candidates?.[0]?.content?.parts;
+
+  if (!Array.isArray(parts)) {
+    return fallbackText;
+  }
+
+  const text = parts
+    .map((part) => (typeof part?.text === "string" ? part.text : ""))
+    .join("")
+    .trim();
+
+  return text || fallbackText;
+};
+
+const requestGemini = async (apiKey, payload) => {
   const response = await fetch(`${process.env.AI_MODEL}?key=${apiKey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: prompt }],
-        },
-      ],
-      tools: [
-        {
-          google_search: {},
-        },
-      ],
-
-      generationConfig: {
-        temperature: 0.5,
-        maxOutputTokens: 700,
-      },
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Gemini API request failed: ${response.status} ${errText}`);
+    const isRetryable = response.status === 429 || response.status >= 500;
+    const message =
+      response.status === 429
+        ? "Gemini API rate limit exceeded"
+        : `Gemini API request failed: ${response.status}`;
+
+    throw new GeminiApiError(message, {
+      status: response.status,
+      body: errText,
+      retryable: isRetryable,
+    });
   }
 
-  const data = await response.json();
-  return (
-    data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-    "No response generated."
+  return response.json();
+};
+
+const buildLocalRecommendations = (readComics, candidateComics, limit = 10) => {
+  const preferredGenres = new Set(
+    readComics.flatMap((comic) =>
+      comic.genres
+        .map((genre) => genre?.name)
+        .filter((genreName) => typeof genreName === "string" && genreName),
+    ),
   );
+  const preferredStatuses = new Set(
+    readComics
+      .map((comic) => comic.status)
+      .filter((status) => typeof status === "string" && status),
+  );
+
+  return candidateComics
+    .map((comic) => {
+      const genreMatches = comic.genres.reduce(
+        (count, genre) => count + (preferredGenres.has(genre?.name) ? 1 : 0),
+        0,
+      );
+      const statusMatch = preferredStatuses.has(comic.status) ? 1 : 0;
+      const popularityScore = (comic.likes || 0) * 2 + (comic.views || 0) / 100;
+
+      return {
+        comic,
+        score: genreMatches * 100 + statusMatch * 20 + popularityScore,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ comic }) => comic);
+};
+
+const getGeminiErrorResponse = (error, fallbackMessage) => {
+  if (!(error instanceof GeminiApiError)) {
+    return null;
+  }
+
+  if (error.status === 429) {
+    return {
+      status: 429,
+      body: { message: fallbackMessage },
+    };
+  }
+
+  return {
+    status: 502,
+    body: { message: "Gemini service is unavailable", details: error.message },
+  };
+};
+
+const generateGeminiText = async (apiKey, prompt) => {
+  const data = await requestGemini(apiKey, {
+    contents: [
+      {
+        parts: [{ text: prompt }],
+      },
+    ],
+    tools: [
+      {
+        google_search: {},
+      },
+    ],
+    generationConfig: {
+      temperature: 0.5,
+      maxOutputTokens: 700,
+    },
+  });
+
+  return parseGeminiText(data, "No response generated.");
 };
 
 const buildComicQueryAndSort = (query, filters) => {
@@ -304,6 +391,90 @@ export const getLikedComics = async (req, res) => {
   }
 };
 
+export const getRecommendedComics = async (req, res) => {
+  try {
+    const { comicIds } = req.body;
+
+    if (!Array.isArray(comicIds) || comicIds.length === 0) {
+      return res.status(400).json({ message: "comicIds must be a non-empty array" });
+    }
+
+    // Fetch comics the user has read for preference extraction
+    const readComics = await Comic.find({ _id: { $in: comicIds } })
+      .select({ title: 1, genres: 1, status: 1 })
+      .populate("genres", "name")
+      .lean();
+
+    // Candidate pool: published comics not already read, sorted by popularity, capped at 100
+    const candidateComics = await Comic.find({
+      _id: { $nin: comicIds },
+      isPublished: true,
+    })
+      .select({
+        title: 1,
+        slug: 1,
+        genres: 1,
+        status: 1,
+        views: 1,
+        likes: 1,
+        author: 1,
+        artist: 1,
+        coverImage: 1,
+      })
+      .populate("genres", "name")
+      .sort({ views: -1 })
+      .limit(100)
+      .lean();
+
+    if (candidateComics.length === 0) {
+      return res.json({ recommendations: [] });
+    }
+
+    const recommendations = buildLocalRecommendations(readComics, candidateComics);
+    const recommendationIds = recommendations.map((comic) => comic._id);
+    const chapterCounts = await Chapter.aggregate([
+      {
+        $match: {
+          comic: { $in: recommendationIds },
+          isPublished: true,
+        },
+      },
+      {
+        $group: {
+          _id: "$comic",
+          total: { $sum: 1 },
+        },
+      },
+    ]);
+    const chapterCountMap = Object.fromEntries(
+      chapterCounts.map(({ _id, total }) => [_id.toString(), total]),
+    );
+
+    const recommendationCards = recommendations.map((comic) => {
+      const totalChapters = chapterCountMap[comic._id.toString()] ?? 0;
+
+      return {
+        ...comic,
+        author: comic.author || null,
+        artist: comic.artist || null,
+        coverImage: comic.coverImage || null,
+        totalChapters,
+        chapters: totalChapters,
+        cover: comic.coverImage || null,
+      };
+    });
+
+    res.json({
+      recommendations: recommendationCards,
+      metadata: {
+        source: "local",
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const askReaderChatbot = async (req, res) => {
   try {
     const { comicId } = req.params;
@@ -414,6 +585,17 @@ Rules:
       },
     });
   } catch (error) {
+    const geminiErrorResponse = getGeminiErrorResponse(
+      error,
+      "Reader chatbot is temporarily rate limited. Please try again shortly.",
+    );
+
+    if (geminiErrorResponse) {
+      return res
+        .status(geminiErrorResponse.status)
+        .json(geminiErrorResponse.body);
+    }
+
     res.status(500).json({ message: error.message });
   }
 };
