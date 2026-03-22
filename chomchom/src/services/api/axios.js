@@ -10,6 +10,19 @@ function extractHost(value) {
   return match?.[1];
 }
 
+function normalizeBaseUrl(value) {
+  if (!value) return undefined;
+  const trimmed = String(value).trim();
+  if (!trimmed) return undefined;
+  const withScheme = trimmed.includes('://') ? trimmed : `http://${trimmed}`;
+  return withScheme.replace(/\/+$/, '');
+}
+
+function isExpoTunnelHost(host) {
+  if (!host) return false;
+  return host.includes('exp.direct') || host.includes('expo.dev');
+}
+
 function getDevMachineHost() {
   const expoConfigHost = extractHost(Constants.expoConfig?.hostUri);
   if (expoConfigHost) return expoConfigHost;
@@ -29,12 +42,17 @@ function getDevMachineHost() {
   return scriptHost;
 }
 
+const envBaseUrl = normalizeBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL);
 const devHost = getDevMachineHost();
-const defaultBaseUrl = devHost
-  ? `http://${devHost}:3000`
-  : Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000';
+const canUseDevHost = devHost && !isExpoTunnelHost(devHost);
+
+const defaultBaseUrl =
+  envBaseUrl ??
+  (canUseDevHost
+    ? `http://${devHost}:3000`
+    : Platform.OS === 'android'
+      ? 'http://10.0.2.2:3000'
+      : 'http://localhost:3000');
 
 export const axiosInstance = axios.create({
   baseURL: defaultBaseUrl,
