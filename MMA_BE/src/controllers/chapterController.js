@@ -6,6 +6,12 @@ const getChapterPriceCoins = () => {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 5;
 };
 
+const getFreeChapterCount = (totalChapters) => {
+  const n = Number(totalChapters);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.ceil(n / 3);
+};
+
 export const createChapter = async (req, res) => {
   try {
     const chapter = await Chapter.create(req.body);
@@ -23,6 +29,7 @@ export const getChaptersByComic = async (req, res) => {
       .lean();
 
     const priceCoins = getChapterPriceCoins();
+    const freeCount = getFreeChapterCount(chapters.length);
     let unlockedSet = new Set();
 
     if (req.user?._id) {
@@ -35,11 +42,16 @@ export const getChaptersByComic = async (req, res) => {
       unlockedSet = new Set(unlocks.map((u) => String(u.chapter)));
     }
 
-    const result = chapters.map((ch) => ({
-      ...ch,
-      locked: priceCoins > 0 ? !unlockedSet.has(String(ch._id)) : false,
-      priceCoins,
-    }));
+    const result = chapters.map((ch) => {
+      const isFree = freeCount > 0 && (ch.chapterNumber ?? 0) <= freeCount;
+      const unlocked = isFree || unlockedSet.has(String(ch._id));
+      return {
+        ...ch,
+        locked: priceCoins > 0 ? !unlocked : false,
+        priceCoins: isFree ? 0 : priceCoins,
+        freeChapter: isFree,
+      };
+    });
 
     res.json({
       chapters: result,
@@ -60,6 +72,14 @@ export const getChapterById = async (req, res) => {
 
     const priceCoins = getChapterPriceCoins();
     let unlocked = priceCoins === 0;
+
+    if (!unlocked && chapter?.comic?._id && typeof chapter.chapterNumber === "number") {
+      const total = await Chapter.countDocuments({ comic: chapter.comic._id });
+      const freeCount = getFreeChapterCount(total);
+      if (freeCount > 0 && chapter.chapterNumber <= freeCount) {
+        unlocked = true;
+      }
+    }
 
     if (!unlocked && req.user?._id) {
       const hasUnlock = await ChapterUnlock.exists({

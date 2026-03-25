@@ -7,7 +7,7 @@ export async function getCoinPacks() {
 
 export async function createCoinPackCheckout(packId) {
   const res = await axiosInstance.post(
-    '/api/payments/checkout',
+    '/api/payments/vnpay/checkout',
     { packId },
     { requiresAuth: true }
   );
@@ -25,4 +25,3 @@ export async function unlockChapterById(chapterId) {
   });
   return res.data;
 }
-

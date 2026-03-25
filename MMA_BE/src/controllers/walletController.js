@@ -19,6 +19,19 @@ export const unlockChapter = async (req, res) => {
     return res.status(404).json({ message: "Chapter not found" });
   }
 
+  // Free unlock (first 1/3 chapters).
+  if (typeof chapter.chapterNumber === "number") {
+    const total = await Chapter.countDocuments({ comic: chapter.comic });
+    const freeCount = Math.ceil(total / 3);
+    if (freeCount > 0 && chapter.chapterNumber <= freeCount) {
+      return res.json({ unlocked: true, coinBalance: req.user.coinBalance, priceCoins: 0, freeChapter: true });
+    }
+  }
+
+  if (priceCoins === 0) {
+    return res.json({ unlocked: true, coinBalance: req.user.coinBalance, priceCoins: 0 });
+  }
+
   const existing = await ChapterUnlock.findOne({ user: req.user._id, chapter: chapter._id }).lean();
   if (existing) {
     return res.json({ unlocked: true, coinBalance: req.user.coinBalance, priceCoins });
@@ -67,4 +80,3 @@ export const unlockChapter = async (req, res) => {
 
   return res.json({ unlocked: true, coinBalance: updatedUser.coinBalance, priceCoins });
 };
-
