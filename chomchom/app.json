@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mma.chomchom",
+      "buildNumber": "1",
       "infoPlist": {
         "CFBundleURLTypes": [
           {
@@ -31,7 +32,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.mma.chomchom"
+      "package": "com.mma.chomchom",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
