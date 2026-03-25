@@ -15,15 +15,24 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './src/config/swagger.js';
+import paymentRoutes from './src/routes/paymentRoutes.js';
+import { stripeWebhook } from './src/controllers/paymentController.js';
+import walletRoutes from './src/routes/walletRoutes.js';
 
 
 const app = express();
 
 connectDB();
 
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(cors());
+
+// Stripe webhook requires raw body for signature verification.
+app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -36,6 +45,16 @@ app.use('/api/comics', comicRoutes);
 app.use('/api/chapters', chapterRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/reading-history', readingHistoryRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/wallet', walletRoutes);
+
+app.get('/payment/success', (req, res) => {
+    res.type('html').send('<h2>Payment successful</h2><p>You can return to the app now.</p>');
+});
+
+app.get('/payment/cancel', (req, res) => {
+    res.type('html').send('<h2>Payment cancelled</h2><p>You can close this page and try again.</p>');
+});
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'Comic API is running' });

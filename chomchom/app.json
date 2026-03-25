@@ -20,7 +20,9 @@
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["$(REVERSED_CLIENT_ID)"]
+            "CFBundleURLSchemes": [
+              "$(REVERSED_CLIENT_ID)"
+            ]
           }
         ]
       }
@@ -42,6 +44,12 @@
       "expo-router",
       "expo-web-browser",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "65ab8475-0a45-4fba-878f-f853af3bf7ba"
+      }
+    }
   }
 }

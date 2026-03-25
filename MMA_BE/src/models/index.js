@@ -21,6 +21,8 @@ const userSchema = new mongoose.Schema(
 
         favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comic" }],
         isActive: { type: Boolean, default: true },
+
+        coinBalance: { type: Number, default: 0, min: 0 },
     },
     { timestamps: true }
 );
@@ -152,6 +154,51 @@ const comicLikeSchema = new mongoose.Schema(
 );
 
 comicLikeSchema.index({ user: 1, comic: 1 }, { unique: true });
+
+/* ===================== WALLET TRANSACTION ===================== */
+const walletTransactionSchema = new mongoose.Schema(
+    {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+
+        type: { type: String, enum: ["credit", "debit"], required: true },
+        coins: { type: Number, required: true },
+        amountVnd: { type: Number }, // only for credits via payment provider
+
+        provider: { type: String, enum: ["stripe", "system"], default: "system" },
+        status: { type: String, enum: ["pending", "succeeded", "failed"], default: "succeeded" },
+
+        stripeEventId: { type: String },
+        stripeSessionId: { type: String },
+
+        metadata: { type: Object },
+    },
+    { timestamps: true }
+);
+
+walletTransactionSchema.index({ user: 1, createdAt: -1 });
+walletTransactionSchema.index({ stripeEventId: 1 }, { unique: true, sparse: true });
+walletTransactionSchema.index({ stripeSessionId: 1 }, { unique: true, sparse: true });
+
+/* ===================== CHAPTER UNLOCK ===================== */
+const chapterUnlockSchema = new mongoose.Schema(
+    {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        comic: { type: mongoose.Schema.Types.ObjectId, ref: "Comic", required: true },
+        chapter: { type: mongoose.Schema.Types.ObjectId, ref: "Chapter", required: true },
+
+        priceCoins: { type: Number, required: true },
+    },
+    { timestamps: true }
+);
+
+chapterUnlockSchema.index({ user: 1, chapter: 1 }, { unique: true });
+chapterUnlockSchema.index({ comic: 1, chapter: 1 });
+
+export const WalletTransaction = mongoose.model(
+    "WalletTransaction",
+    walletTransactionSchema
+);
+export const ChapterUnlock = mongoose.model("ChapterUnlock", chapterUnlockSchema);
 
 /* ===================== EXPORT ===================== */
 export const User = mongoose.model("User", userSchema);

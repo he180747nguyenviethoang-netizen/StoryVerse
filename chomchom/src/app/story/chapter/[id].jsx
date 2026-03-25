@@ -5,6 +5,7 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  Alert,
   TouchableOpacity,
   TouchableWithoutFeedback,
   Dimensions,
@@ -22,6 +23,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { updateReadingHistory } from '../../../features/bookmarks/api';
 import { useAuth } from '../../../features/auth/hooks';
 import { ReaderChatbot } from '../../../features/chapters/reader/ReaderChatbot';
+import { getMyWallet, unlockChapterById } from '../../../features/payments/api';
 
 const { width } = Dimensions.get('window');
 const ITEM_HEIGHT = 64;
@@ -178,6 +180,8 @@ export default function ChapterDetail() {
   const [sortOrder, setSortOrder] = useState('asc');
   const [imageLoading, setImageLoading] = useState({});
   const [chatbotVisible, setChatbotVisible] = useState(false);
+  const [wallet, setWallet] = useState(null);
+  const [unlocking, setUnlocking] = useState(false);
 
   const chapterListRef = useRef(null);
   const uiAnim = useRef(new Animated.Value(1)).current;
@@ -218,6 +222,24 @@ export default function ChapterDetail() {
       cancelled = true;
     };
   }, [chapterId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadWallet = async () => {
+      if (!isAuthenticated) return;
+      if (!chapter?.locked) return;
+      try {
+        const w = await getMyWallet();
+        if (!cancelled) setWallet(w);
+      } catch {
+        if (!cancelled) setWallet(null);
+      }
+    };
+    loadWallet();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, chapter?.locked]);
 
   useEffect(() => {
     if (chapter && comicId && chapterId) {
@@ -302,6 +324,60 @@ export default function ChapterDetail() {
         <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>{t('story.chapter.loading')}</Text>
+      </View>
+    );
+  }
+
+  const handleUnlock = async () => {
+    if (!isAuthenticated) {
+      Alert.alert(t('common.error'), 'Please login to unlock this chapter.');
+      return;
+    }
+
+    try {
+      setUnlocking(true);
+      await unlockChapterById(chapterId);
+      const w = await getMyWallet();
+      setWallet(w);
+      const data = await getChapterById(chapterId);
+      setChapter(data);
+    } catch (error) {
+      const msg = error?.response?.data?.message || error?.message || 'Unlock failed';
+      Alert.alert(t('common.error'), msg);
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  if (chapter?.locked) {
+    return (
+      <View style={styles.loadingContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <Text style={[styles.loadingText, { fontWeight: '800', fontSize: 18 }]}>
+          Chapter locked
+        </Text>
+        <Text style={styles.loadingText}>
+          Price: {chapter?.priceCoins ?? 5} coins
+        </Text>
+        {wallet && (
+          <Text style={styles.loadingText}>
+            Your balance: {wallet?.coinBalance ?? 0} coins
+          </Text>
+        )}
+        <TouchableOpacity
+          style={[styles.navButton, unlocking && { opacity: 0.7 }]}
+          onPress={handleUnlock}
+          disabled={unlocking}
+        >
+          {unlocking ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Text style={styles.navButtonText}>Unlock</Text>
+          )}
+        </TouchableOpacity>
+        <Text style={[styles.loadingText, { marginTop: 16 }]}>
+          Buy coins in Profile → Coins
+        </Text>
       </View>
     );
   }

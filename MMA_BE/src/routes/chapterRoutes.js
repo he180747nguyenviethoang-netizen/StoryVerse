@@ -3,6 +3,8 @@ import {
   getChaptersByComic,
   getChapterById,
 } from '../controllers/chapterController.js';
+import { protect, optionalProtect } from '../middlewares/auth.js';
+import { unlockChapter } from '../controllers/walletController.js';
 
 const router = express.Router();
 
@@ -22,7 +24,7 @@ const router = express.Router();
  *       200:
  *         description: List of chapters
  */
-router.get('/comic/:comicId', getChaptersByComic);
+router.get('/comic/:comicId', optionalProtect, getChaptersByComic);
 
 /**
  * @swagger
@@ -42,6 +44,7 @@ router.get('/comic/:comicId', getChaptersByComic);
  *       404:
  *         description: Chapter not found
  */
-router.get('/:id', getChapterById);
+router.get('/:id', optionalProtect, getChapterById);
+router.post('/:id/unlock', protect, unlockChapter);
 
 export default router;

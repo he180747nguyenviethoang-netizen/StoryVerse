@@ -19,6 +19,8 @@ import { useSettings } from '../../features/settings/hooks';
 import RegisterScreen from '../(auth)/register';
 import LoginScreen from '../(auth)/login';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import * as WebBrowser from 'expo-web-browser';
+import { createCoinPackCheckout, getCoinPacks, getMyWallet } from '../../features/payments/api';
 
 // ---------- Unauthenticated view ----------
 function GuestView() {
@@ -46,6 +48,9 @@ function UserProfile() {
   const { t } = useTranslation();
   const { top: topInset } = useSafeAreaInsets();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [coinBalance, setCoinBalance] = useState(0);
+  const [coinPacks, setCoinPacks] = useState([]);
+  const [loadingWallet, setLoadingWallet] = useState(false);
   const [readingCount, setReadingCount] = useState(0);
   const [likedCount, setLikedCount] = useState(0);
   const navigation = useNavigation();
@@ -89,6 +94,26 @@ function UserProfile() {
 
       loadStats();
 
+      const loadWallet = async () => {
+        setLoadingWallet(true);
+        try {
+          const [walletRes, packsRes] = await Promise.all([getMyWallet(), getCoinPacks()]);
+          if (!cancelled) {
+            setCoinBalance(walletRes?.coinBalance ?? 0);
+            setCoinPacks(Array.isArray(packsRes?.packs) ? packsRes.packs : []);
+          }
+        } catch {
+          if (!cancelled) {
+            setCoinBalance(0);
+            setCoinPacks([]);
+          }
+        } finally {
+          if (!cancelled) setLoadingWallet(false);
+        }
+      };
+
+      loadWallet();
+
       return () => {
         cancelled = true;
       };
@@ -99,6 +124,23 @@ function UserProfile() {
     { icon: 'person-outline', label: t('profile.menu.editProfile'), route: 'EditProfile' },
     { icon: 'settings-outline', label: t('profile.menu.settings'), route: 'Setting' },
   ];
+
+  const buyCoins = async (packId) => {
+    try {
+      const res = await createCoinPackCheckout(packId);
+      const url = res?.url;
+      if (!url) throw new Error('Missing checkout url');
+      await WebBrowser.openBrowserAsync(url);
+      // Refresh balance after returning from checkout.
+      const walletRes = await getMyWallet();
+      setCoinBalance(walletRes?.coinBalance ?? 0);
+    } catch (error) {
+      Alert.alert(
+        t('common.error'),
+        error?.response?.data?.message || error?.message || 'Buy coins failed'
+      );
+    }
+  };
 
   async function handleLogout() {
     Alert.alert(t('auth.logout.title'), t('auth.logout.confirm'), [
@@ -186,6 +228,32 @@ function UserProfile() {
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         ))}
+      </View>
+
+      {/* Wallet */}
+      <View style={prof.walletSection}>
+        <Text style={prof.walletTitle}>Coins</Text>
+        {loadingWallet ? (
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 10 }} />
+        ) : (
+          <>
+            <Text style={prof.walletBalance}>{coinBalance} coins</Text>
+            <View style={prof.packRow}>
+              {coinPacks.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={prof.packBtn}
+                  onPress={() => buyCoins(p.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={prof.packText}>{p.coins} coins</Text>
+                  <Text style={prof.packSub}>{(p.amountVnd / 1000).toFixed(0)}k</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={prof.walletHint}>1 coin = 1.000đ • Chapter = 5 coins</Text>
+          </>
+        )}
       </View>
 
       {/* Logout */}
@@ -308,6 +376,55 @@ function makeStyles(colors) {
       borderColor: colors.border,
       overflow: 'hidden',
       marginBottom: 20,
+    },
+    walletSection: {
+      width: '100%',
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      marginBottom: 20,
+    },
+    walletTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 8,
+    },
+    walletBalance: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    packRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 12,
+      flexWrap: 'wrap',
+    },
+    packBtn: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      backgroundColor: colors.secondary,
+      borderRadius: 12,
+      minWidth: 90,
+      alignItems: 'center',
+    },
+    packText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    packSub: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    walletHint: {
+      marginTop: 10,
+      fontSize: 12,
+      color: colors.textMuted,
     },
     menuItem: {
       flexDirection: 'row',
