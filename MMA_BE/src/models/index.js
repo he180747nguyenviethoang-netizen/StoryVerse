@@ -1,204 +1,236 @@
-
 import mongoose from "mongoose";
 
 /* ===================== USER ===================== */
 const userSchema = new mongoose.Schema(
-    {
-        username: { type: String, required: true, unique: true, trim: true },
-        email: { type: String, required: true, unique: true },
-        password: { type: String }, // Optional for Google Auth users
+  {
+    username: { type: String, required: true, unique: true, trim: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String }, // Optional for Google Auth users
 
-        googleId: { type: String, unique: true, sparse: true },
-        avatar: String,
-        role: { type: String, enum: ["user", "admin"], default: "user" },
-        isVerified: { type: Boolean, default: true },
+    googleId: { type: String, unique: true, sparse: true },
+    avatar: String,
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    isVerified: { type: Boolean, default: true },
 
-        verificationCode: { type: String },
-        verificationCodeExpires: { type: Date },
-        resetPasswordCode: { type: String },
-        resetPasswordCodeExpires: { type: Date },
-        resetPasswordVerifiedUntil: { type: Date },
+    verificationCode: { type: String },
+    verificationCodeExpires: { type: Date },
+    resetPasswordCode: { type: String },
+    resetPasswordCodeExpires: { type: Date },
+    resetPasswordVerifiedUntil: { type: Date },
 
-        favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comic" }],
-        isActive: { type: Boolean, default: true },
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comic" }],
+    isActive: { type: Boolean, default: true },
 
-        coinBalance: { type: Number, default: 0, min: 0 },
-    },
-    { timestamps: true }
+    coinBalance: { type: Number, default: 0, min: 0 },
+  },
+  { timestamps: true },
 );
 
 /* ===================== GENRE ===================== */
 const genreSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
-    slug: { type: String, required: true, unique: true },
-    crawlLink: { type: String },
+  name: { type: String, required: true, unique: true },
+  slug: { type: String, required: true, unique: true },
+  crawlLink: { type: String },
 });
 
 /* ===================== COMIC ===================== */
 const comicSchema = new mongoose.Schema(
-    {
-        title: { type: String, required: true },
-        slug: { type: String, required: true, unique: true },
+  {
+    title: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
 
-        description: String,
-        coverImage: String,
+    description: String,
+    coverImage: String,
 
-        author: String,
-        artist: String,
+    author: String,
+    artist: String,
 
-        status: {
-            type: String,
-            enum: ["ongoing", "completed", "hiatus"],
-            default: "ongoing",
-        },
-
-        genres: [{ type: mongoose.Schema.Types.ObjectId, ref: "Genre" }],
-        chapters: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chapter" }],
-
-        views: { type: Number, default: 0 },
-        likes: { type: Number, default: 0 },
-
-        isPublished: { type: Boolean, default: true },
-
-        crawlLink: { type: String },
+    status: {
+      type: String,
+      enum: ["ongoing", "completed", "hiatus"],
+      default: "ongoing",
     },
-    { timestamps: true }
+
+    genres: [{ type: mongoose.Schema.Types.ObjectId, ref: "Genre" }],
+    chapters: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chapter" }],
+
+    views: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
+
+    isPublished: { type: Boolean, default: true },
+
+    crawlLink: { type: String },
+  },
+  { timestamps: true },
 );
 
 comicSchema.index({ title: 1 });
 
 /* ===================== PAGE (Embedded) ===================== */
 const pageSchema = new mongoose.Schema(
-    {
-        pageNumber: { type: Number, required: true },
-        imageUrl: { type: String, required: true },
-    },
-    { _id: false }
+  {
+    pageNumber: { type: Number, required: true },
+    imageUrl: { type: String, required: true },
+  },
+  { _id: false },
 );
 
 /* ===================== CHAPTER ===================== */
 const chapterSchema = new mongoose.Schema(
-    {
-        comic: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Comic",
-            required: true,
-        },
-
-        chapterNumber: { type: Number, required: true },
-        title: String,
-
-        pages: [pageSchema],
-
-        views: { type: Number, default: 0 },
-        isPublished: { type: Boolean, default: true },
-
-        crawlLink: { type: String },
+  {
+    comic: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comic",
+      required: true,
     },
-    { timestamps: true }
+
+    chapterNumber: { type: Number, required: true },
+    title: String,
+
+    pages: [pageSchema],
+
+    views: { type: Number, default: 0 },
+    isPublished: { type: Boolean, default: true },
+
+    crawlLink: { type: String },
+  },
+  { timestamps: true },
 );
 
 chapterSchema.index({ comic: 1, chapterNumber: 1 }, { unique: true });
 
 chapterSchema.pre("save", function (next) {
-    if (this.pages?.length) {
-        this.pages.sort((a, b) => a.pageNumber - b.pageNumber);
-    }
-    next();
+  if (this.pages?.length) {
+    this.pages.sort((a, b) => a.pageNumber - b.pageNumber);
+  }
+  next();
 });
 
 /* ===================== COMMENT ===================== */
 const commentSchema = new mongoose.Schema(
-    {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-        comic: { type: mongoose.Schema.Types.ObjectId, ref: "Comic" },
-        chapter: { type: mongoose.Schema.Types.ObjectId, ref: "Chapter" },
+    comic: { type: mongoose.Schema.Types.ObjectId, ref: "Comic" },
+    chapter: { type: mongoose.Schema.Types.ObjectId, ref: "Chapter" },
 
-        content: { type: String, required: true },
+    content: { type: String, required: true },
 
-        rating: { type: Number, min: 1, max: 5 },
+    rating: { type: Number, min: 1, max: 5 },
 
-        parentComment: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Comment",
-            default: null,
-        },
+    parentComment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comment",
+      default: null,
     },
-    { timestamps: true }
+  },
+  { timestamps: true },
 );
 
 /* ===================== READING HISTORY ===================== */
 const readingHistorySchema = new mongoose.Schema(
-    {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-        comic: { type: mongoose.Schema.Types.ObjectId, ref: "Comic", required: true },
-        chapter: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Chapter",
-            required: true,
-        },
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    comic: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comic",
+      required: true,
     },
-    { timestamps: true }
+    chapter: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chapter",
+      required: true,
+    },
+  },
+  { timestamps: true },
 );
 
 readingHistorySchema.index({ user: 1, comic: 1 }, { unique: true });
 
 /* ===================== LIKES ===================== */
 const comicLikeSchema = new mongoose.Schema(
-    {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-        comic: { type: mongoose.Schema.Types.ObjectId, ref: "Comic", required: true },
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    comic: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comic",
+      required: true,
     },
-    { timestamps: true }
+  },
+  { timestamps: true },
 );
 
 comicLikeSchema.index({ user: 1, comic: 1 }, { unique: true });
 
 /* ===================== WALLET TRANSACTION ===================== */
 const walletTransactionSchema = new mongoose.Schema(
-    {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-        type: { type: String, enum: ["credit", "debit"], required: true },
-        coins: { type: Number, required: true },
-        amountVnd: { type: Number }, // only for credits via payment provider
+    type: { type: String, enum: ["credit", "debit"], required: true },
+    coins: { type: Number, required: true },
+    amountVnd: { type: Number }, // only for credits via payment provider
 
-        provider: { type: String, enum: ["stripe", "system"], default: "system" },
-        status: { type: String, enum: ["pending", "succeeded", "failed"], default: "succeeded" },
-
-        stripeEventId: { type: String },
-        stripeSessionId: { type: String },
-
-        metadata: { type: Object },
+    provider: {
+      type: String,
+      enum: ["stripe", "vnpay", "system"],
+      default: "system",
     },
-    { timestamps: true }
+    status: {
+      type: String,
+      enum: ["pending", "succeeded", "failed"],
+      default: "succeeded",
+    },
+
+    stripeEventId: { type: String },
+    stripeSessionId: { type: String },
+
+    metadata: { type: Object },
+  },
+  { timestamps: true },
 );
 
 walletTransactionSchema.index({ user: 1, createdAt: -1 });
-walletTransactionSchema.index({ stripeEventId: 1 }, { unique: true, sparse: true });
-walletTransactionSchema.index({ stripeSessionId: 1 }, { unique: true, sparse: true });
+walletTransactionSchema.index(
+  { stripeEventId: 1 },
+  { unique: true, sparse: true },
+);
+walletTransactionSchema.index(
+  { stripeSessionId: 1 },
+  { unique: true, sparse: true },
+);
 
 /* ===================== CHAPTER UNLOCK ===================== */
 const chapterUnlockSchema = new mongoose.Schema(
-    {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-        comic: { type: mongoose.Schema.Types.ObjectId, ref: "Comic", required: true },
-        chapter: { type: mongoose.Schema.Types.ObjectId, ref: "Chapter", required: true },
-
-        priceCoins: { type: Number, required: true },
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    comic: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comic",
+      required: true,
     },
-    { timestamps: true }
+    chapter: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chapter",
+      required: true,
+    },
+
+    priceCoins: { type: Number, required: true },
+  },
+  { timestamps: true },
 );
 
 chapterUnlockSchema.index({ user: 1, chapter: 1 }, { unique: true });
 chapterUnlockSchema.index({ comic: 1, chapter: 1 });
 
 export const WalletTransaction = mongoose.model(
-    "WalletTransaction",
-    walletTransactionSchema
+  "WalletTransaction",
+  walletTransactionSchema,
 );
-export const ChapterUnlock = mongoose.model("ChapterUnlock", chapterUnlockSchema);
+export const ChapterUnlock = mongoose.model(
+  "ChapterUnlock",
+  chapterUnlockSchema,
+);
 
 /* ===================== EXPORT ===================== */
 export const User = mongoose.model("User", userSchema);
@@ -207,7 +239,7 @@ export const Comic = mongoose.model("Comic", comicSchema);
 export const Chapter = mongoose.model("Chapter", chapterSchema);
 export const Comment = mongoose.model("Comment", commentSchema);
 export const ReadingHistory = mongoose.model(
-    "ReadingHistory",
-    readingHistorySchema
+  "ReadingHistory",
+  readingHistorySchema,
 );
 export const ComicLike = mongoose.model("ComicLike", comicLikeSchema);

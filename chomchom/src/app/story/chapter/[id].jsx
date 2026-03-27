@@ -140,6 +140,8 @@ function makeStyles(colors) {
     chapterItemActive: { backgroundColor: colors.secondary },
     chapterItemText: { fontSize: 15, color: colors.textSecondary },
     chapterItemTextActive: { color: colors.primary, fontWeight: 'bold' },
+    chapterItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    paidStar: { color: '#f59e0b', fontSize: 14, fontWeight: '900' },
     activeIndicator: { color: colors.primary, fontSize: 20 },
     chatbotFab: {
       position: 'absolute',
@@ -526,6 +528,7 @@ export default function ChapterDetail() {
                 }}
                 renderItem={({ item }) => {
                   const isActive = item._id === chapter._id;
+                  const isPaidChapter = !item?.freeChapter && Number(item?.priceCoins ?? 0) > 0;
                   return (
                     <TouchableOpacity
                       style={[styles.chapterItem, isActive && styles.chapterItemActive]}
@@ -539,11 +542,14 @@ export default function ChapterDetail() {
                         }
                       }}
                     >
-                      <Text
-                        style={[styles.chapterItemText, isActive && styles.chapterItemTextActive]}
-                      >
-                        Chương {item.chapterNumber}
-                      </Text>
+                      <View style={styles.chapterItemLeft}>
+                        <Text
+                          style={[styles.chapterItemText, isActive && styles.chapterItemTextActive]}
+                        >
+                          Chương {item.chapterNumber}
+                        </Text>
+                        {isPaidChapter && <Text style={styles.paidStar}>★</Text>}
+                      </View>
                       {isActive && <Text style={styles.activeIndicator}>•</Text>}
                     </TouchableOpacity>
                   );

@@ -18,6 +18,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../features/auth/hooks';
 import { getReadingHistory, likeComic, getLikedComics } from '../../features/bookmarks/api';
+import { getChaptersByComic } from '../../features/chapters/api';
 import { getComicDetails, getComicReviews, createReview, updateReview, deleteReview } from '../../services/api/comics';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../../features/settings/hooks';
@@ -339,8 +340,16 @@ function makeStyles(colors) {
       fontSize: 14,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 2,
+      flexShrink: 1,
     },
+    chapterTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 2,
+      flex: 1,
+    },
+    paidStar: { color: '#f59e0b', fontSize: 14, fontWeight: '900' },
     chapterTime: {
       fontSize: 12,
       color: colors.textMuted,
@@ -654,13 +663,14 @@ export default function StoryDetail() {
 
     const fetchComicDetails = async () => {
       try {
-        const [comicRes, reviewsRes] = await Promise.all([
+        const [comicRes, reviewsRes, chaptersRes] = await Promise.all([
           getComicDetails(comicId),
           getComicReviews(comicId),
+          getChaptersByComic(comicId),
         ]);
         const comicData = comicRes?.comic || comicRes;
         setComic(comicData);
-        setChapters(comicData?.chapters || []);
+        setChapters(chaptersRes?.chapters || comicData?.chapters || []);
         setReviews(normalizeReviews(reviewsRes));
         setIsLiked((prev) =>
           typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
@@ -673,13 +683,14 @@ export default function StoryDetail() {
     };
     fetchComicDetails();
     try {
-      const [comicRes, reviewsRes] = await Promise.all([
+      const [comicRes, reviewsRes, chaptersRes] = await Promise.all([
         getComicDetails(comicId),
         getComicReviews(comicId),
+        getChaptersByComic(comicId),
       ]);
       const comicData = comicRes?.comic || comicRes;
       setComic(comicData);
-      setChapters(comicData?.chapters || []);
+      setChapters(chaptersRes?.chapters || comicData?.chapters || []);
       setReviews(normalizeReviews(reviewsRes));
       setIsLiked((prev) =>
         typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
@@ -818,6 +829,7 @@ export default function StoryDetail() {
     : t('story.detail.readNow');
 
   const renderChapter = ({ item }) => {
+    const isPaidChapter = !item?.freeChapter && Number(item?.priceCoins ?? 0) > 0;
     return (
       <TouchableOpacity
         key={item._id || item.id}
@@ -830,7 +842,12 @@ export default function StoryDetail() {
             <Text style={styles.chapterNumber}>{item.chapterNumber}</Text>
           </View>
           <View style={styles.chapterInfo}>
-            <Text style={styles.chapterTitle}>{item.title}</Text>
+            <View style={styles.chapterTitleRow}>
+              <Text style={styles.chapterTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              {isPaidChapter && <Text style={styles.paidStar}>★</Text>}
+            </View>
             <Text style={styles.chapterTime}>{formatDate(item.updatedAt)}</Text>
           </View>
         </View>

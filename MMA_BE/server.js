@@ -24,6 +24,7 @@ const app = express();
 connectDB();
 
 app.set('trust proxy', 1);
+app.set('etag', false);
 
 app.use(helmet());
 app.use(morgan('dev'));

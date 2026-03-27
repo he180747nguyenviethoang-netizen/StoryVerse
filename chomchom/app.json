@@ -3,7 +3,7 @@
     "name": "chomchom",
     "slug": "chomchom",
     "scheme": "chomchom-app",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "automatic",
@@ -35,7 +35,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.mma.chomchom",
-      "versionCode": 1
+      "versionCode": 4
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -7,6 +7,7 @@ const getChapterPriceCoins = () => {
 };
 
 export const getMyWallet = async (req, res) => {
+  res.set("Cache-Control", "no-store");
   res.json({ coinBalance: req.user?.coinBalance ?? 0, coinRateVnd: 1000 });
 };
 
